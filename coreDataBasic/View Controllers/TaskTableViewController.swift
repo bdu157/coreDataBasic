@@ -11,6 +11,13 @@ import CoreData
 
 class TaskTableViewController: UITableViewController, NSFetchedResultsControllerDelegate {
 
+    @IBAction func refreshControl(_ sender: Any) {
+        self.taskController.fetchTaskFromServer { (_) in
+            DispatchQueue.main.async {
+                self.refreshControl?.endRefreshing()
+            }
+        }
+    }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -45,6 +52,10 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
         // add NSFetchResulsControllerDelegate
     }()
     
+    
+    private let taskController = TaskController()
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -78,16 +89,25 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             let task = self.fetchedResultsController.object(at: indexPath)
-            let moc = CoreDataStack.shared.mainContext
-            moc.delete(task)
-        
-            do {
-                try moc.save()
-                self.tableView.reloadData()
-            } catch {
-                moc.reset()
-                NSLog("Error saving managed object context: \(error)")
+            
+            //delete data in server first and coreData
+            taskController.deleteTaskFromServer(task) { (error) in
+                if let error = error {
+                    NSLog("Error deleting task from server: \(error)")
+                    return
+                }
+                let moc = CoreDataStack.shared.mainContext
+                moc.delete(task)
+                
+                do {
+                    try moc.save()
+                    self.tableView.reloadData()
+                } catch {
+                    moc.reset()
+                    NSLog("Error saving managed object context: \(error)")
+                }
             }
+            
         }
     }
     // MARK: - Navigation
@@ -98,6 +118,10 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
             guard let destVC = segue.destination as? TaskDetailViewController,
                 let selectedRow = self.tableView.indexPathForSelectedRow else {return}
                 destVC.task = self.fetchedResultsController.object(at: selectedRow)
+                destVC.taskController = self.taskController
+        } else if segue.identifier == "ShowCreateTask" {
+            guard let destVC = segue.destination as? TaskDetailViewController else {return}
+                destVC.taskController = self.taskController
             }
         }
     

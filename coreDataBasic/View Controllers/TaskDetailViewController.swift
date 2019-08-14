@@ -22,6 +22,8 @@ class TaskDetailViewController: UIViewController {
         }
     }
     
+    var taskController: TaskController!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         self.updateViews()
@@ -43,8 +45,10 @@ class TaskDetailViewController: UIViewController {
             task.name = taskName
             task.priority = priority.rawValue
             task.notes = notes
+            taskController.put(task: task)
         } else {
-            let _ = Task(name: taskName, notes: notes, priority: priority) // create new task using Task
+            let newTask = Task(name: taskName, notes: notes, priority: priority) // create new task using Task
+            taskController.put(task: newTask)
         }
         
         //save - basic persistence - relaunching the app datas are still there

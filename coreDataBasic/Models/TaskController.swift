@@ -121,4 +121,20 @@ class TaskController {
         let moc = CoreDataStack.shared.mainContext
         try moc.save()
     }
+    
+    //delete from server
+    func deleteTaskFromServer(_ task: Task, completion: @escaping CompletionHandler = { _ in }) {
+        guard let uuid = task.identifier else {
+            completion(NSError())
+            return
+        }
+        let requestURL = baseURL.appendingPathComponent(uuid.uuidString).appendingPathExtension("json")
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { (_, response, error) in
+            print(response!)
+            completion(error)
+        }.resume()
+    }
 }

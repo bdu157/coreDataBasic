@@ -53,6 +53,12 @@
                             </connections>
                         </barButtonItem>
                     </navigationItem>
+                    <refreshControl key="refreshControl" opaque="NO" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" id="F9p-zy-HP5">
+                        <autoresizingMask key="autoresizingMask"/>
+                        <connections>
+                            <action selector="refreshControl:" destination="O7w-AQ-g1J" eventType="valueChanged" id="n78-e8-lgs"/>
+                        </connections>
+                    </refreshControl>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Zie-nv-WfX" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
@@ -166,6 +172,6 @@
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="EW7-1e-K4q"/>
+        <segue reference="aFx-IV-6SK"/>
     </inferredMetricsTieBreakers>
 </document>
