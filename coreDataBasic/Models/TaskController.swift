@@ -37,51 +37,64 @@ class TaskController {
             
             do {
                 let taskRepresentations = Array(try JSONDecoder().decode([String: TaskRepresentation].self, from: data).values)
-                try self.updateTasks(with: taskRepresentations)
+                let moc = CoreDataStack.shared.container.newBackgroundContext()
+                try self.updateTasks(with: taskRepresentations, context: moc)
                 completion(nil)
             } catch {
                 NSLog("Error decoding task representations: \(error)")
                 completion(error)
             }
-        }.resume()
+            }.resume()
     }
     
-            //comparing what we have in CoreData
-            private func updateTasks(with representations: [TaskRepresentation]) throws {
-                for taskRep in representations {
-                    guard let uuid = UUID(uuidString: taskRep.identifier) else { continue}
-                    
-                    let task = self.task(forUUID: uuid)
-                    
-                    if let task = task {
-                        self.update(task: task, with: taskRep)
-                    }  else {
-                        let _ = Task(taskRepresentation: taskRep)
-                    }
+    //comparing what we have in CoreData
+    private func updateTasks(with representations: [TaskRepresentation], context: NSManagedObjectContext) throws {
+        var error: Error? = nil
+        
+        context.performAndWait {
+            for taskRep in representations {
+                guard let uuid = UUID(uuidString: taskRep.identifier) else { continue}
+                
+                let task = self.task(forUUID: uuid, in: context)
+                
+                if let task = task {
+                    self.update(task: task, with: taskRep)
+                }  else {
+                    let _ = Task(taskRepresentation: taskRep, context: context)
                 }
-                try self.saveToPersistentStore()
-                }
+            }
+            do {
+                try context.save()
+            } catch let saveError {
+                error = saveError
+            }
+        }
+        if let error = error {throw error}
+        // try self.saveToPersistentStore()
+    }
     
-                    //Get task from UUID - one task from coreData to compare this to fetcheddata from firebase
-                    private func task(forUUID uuid: UUID) -> Task? {
-                        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-                        fetchRequest.predicate = NSPredicate(format: "identifier == %@", uuid as NSUUID)  //%@ is an argument - UUID here is because in coreData identifier datatype is UUID
-                        
-                        do {
-                            let moc = CoreDataStack.shared.mainContext
-                            return try moc.fetch(fetchRequest).first //just one of tasks
-                        } catch {
-                            NSLog("Error fetching task with uuid \(uuid): \(error)")
-                            return nil
-                        }
-                    }
+    //Get task from UUID - one task from coreData to compare this to fetcheddata from firebase
+    private func task(forUUID uuid: UUID, in context: NSManagedObjectContext) -> Task? {
+        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "identifier == %@", uuid as NSUUID)  //%@ is an argument - UUID here is because in coreData identifier datatype is UUID
+        var result: Task? = nil
+        
+        context.performAndWait {
+            do {
+                try result = context.fetch(fetchRequest).first
+            } catch {
+                NSLog("Error fetching task with uuid: \(uuid): \(error)")
+            }
+        }
+        return result
+    }
     
-                    //updating app data after comparing coredata and firebase
-                    private func update(task: Task, with representation: TaskRepresentation) {
-                        task.name = representation.name
-                        task.notes = representation.notes
-                        task.priority = representation.priority
-                    }
+    //updating app data after comparing coredata and firebase
+    private func update(task: Task, with representation: TaskRepresentation) {
+        task.name = representation.name
+        task.notes = representation.notes
+        task.priority = representation.priority
+    }
     
     //PUT request
     func put(task: Task, completion: @escaping CompletionHandler = { _ in }) {
@@ -114,7 +127,7 @@ class TaskController {
                 return
             }
             completion(nil)
-        }.resume()
+            }.resume()
     }
     
     func saveToPersistentStore() throws {
@@ -135,6 +148,6 @@ class TaskController {
         URLSession.shared.dataTask(with: request) { (_, response, error) in
             print(response!)
             completion(error)
-        }.resume()
+            }.resume()
     }
 }

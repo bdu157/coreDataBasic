@@ -10,7 +10,7 @@ import UIKit
 import CoreData
 
 class TaskTableViewController: UITableViewController, NSFetchedResultsControllerDelegate {
-
+    
     @IBAction func refreshControl(_ sender: Any) {
         self.taskController.fetchTaskFromServer { (_) in
             DispatchQueue.main.async {
@@ -27,18 +27,18 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
     // this is not a good efficient way to do fetching
     // will be excuted every time tasks property is accessed.
     // computed property for our task
-//    var tasks: [Task] {
-//        let fetchRequest : NSFetchRequest<Task> = Task.fetchRequest()
-//        let moc = CoreDataStack.shared.mainContext
-//
-//        do {
-//            return try moc.fetch(fetchRequest)
-//        } catch {
-//            NSLog("Error fetching tasks: \(error)")
-//            return []
-//        }
-//    }
-
+    //    var tasks: [Task] {
+    //        let fetchRequest : NSFetchRequest<Task> = Task.fetchRequest()
+    //        let moc = CoreDataStack.shared.mainContext
+    //
+    //        do {
+    //            return try moc.fetch(fetchRequest)
+    //        } catch {
+    //            NSLog("Error fetching tasks: \(error)")
+    //            return []
+    //        }
+    //    }
+    
     // NSFetchResults controller - fetching datas from CoreData - from save Datas
     lazy var fetchedResultsController: NSFetchedResultsController<Task> = {   //name of Entity not the version name or file name
         let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
@@ -58,18 +58,18 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
     }
-
+    
     // MARK: - Table view data source
     override func numberOfSections(in tableView: UITableView) -> Int {
         return self.fetchedResultsController.sections?.count ?? 1
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.fetchedResultsController.sections?[section].numberOfObjects ?? 0
     }
-
+    
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         guard let sectionInfo = self.fetchedResultsController.sections?[section] else {return nil}
         return sectionInfo.name.capitalized
@@ -84,7 +84,7 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
         
         return cell
     }
-
+    
     // Override to support editing the table view.
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
@@ -97,33 +97,35 @@ class TaskTableViewController: UITableViewController, NSFetchedResultsController
                     return
                 }
                 let moc = CoreDataStack.shared.mainContext
-                moc.delete(task)
-                
-                do {
-                    try moc.save()
-                    self.tableView.reloadData()
-                } catch {
-                    moc.reset()
-                    NSLog("Error saving managed object context: \(error)")
+                moc.performAndWait {
+                    moc.delete(task)
+                    
+                    do {
+                        try moc.save()
+                        self.tableView.reloadData()
+                    } catch {
+                        moc.reset()
+                        NSLog("Error saving managed object context: \(error)")
+                    }
                 }
             }
             
         }
     }
     // MARK: - Navigation
-
+    
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "ShowDetail" {
             guard let destVC = segue.destination as? TaskDetailViewController,
                 let selectedRow = self.tableView.indexPathForSelectedRow else {return}
-                destVC.task = self.fetchedResultsController.object(at: selectedRow)
-                destVC.taskController = self.taskController
+            destVC.task = self.fetchedResultsController.object(at: selectedRow)
+            destVC.taskController = self.taskController
         } else if segue.identifier == "ShowCreateTask" {
             guard let destVC = segue.destination as? TaskDetailViewController else {return}
-                destVC.taskController = self.taskController
-            }
+            destVC.taskController = self.taskController
         }
+    }
     
     //MARK: - NSfetchresultcontrollerDelegate
     func controllerWillChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
